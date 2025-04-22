@@ -27,12 +27,17 @@ def polar_animator(polar_function, frames=200, interval=100, equation_str="r = f
         Dictionary mapping coefficient names to their values
     """
     # Create figure and polar axes
-    fig = plt.figure(figsize=(10, 10))
-    ax = fig.add_subplot(111, projection='polar')
+    fig = plt.figure(figsize=(12, 10))
+    # Use gridspec to position the plot with better margins, lower position, and more space for title
+    gs = fig.add_gridspec(1, 1, left=0.25, right=0.95, top=0.75, bottom=0.05)
+    ax = fig.add_subplot(gs[0, 0], projection='polar')
     
     # Set axis limits - handle negative r values by using the absolute max
     r_values = [polar_function(theta) for theta in np.linspace(0, 2*np.pi, 1000)]
     ax.set_ylim(0, 1.1 * max(abs(min(r_values)), abs(max(r_values))))
+    
+    # Increase tick label font size
+    ax.tick_params(axis='both', which='major', labelsize=12)
     
     # Compute full curve for reference
     theta_full = np.linspace(0, 2*np.pi, 1000)
@@ -41,7 +46,7 @@ def polar_animator(polar_function, frames=200, interval=100, equation_str="r = f
     # Plot the full curve in light gray
     # For rose patterns and other functions with negative r values, 
     # we need to handle the sign correctly in polar coordinates
-    ax.plot(theta_full, np.abs(r_full), 'lightgray', alpha=0.5, label='Full curve')
+    ax.plot(theta_full, np.abs(r_full), 'lightgray', alpha=0.6, label='Full curve', linewidth=1.5)
     
     # Initialize empty line for the traced part
     theta_trace = np.linspace(0, 0, 2)
@@ -65,21 +70,25 @@ def polar_animator(polar_function, frames=200, interval=100, equation_str="r = f
     # Initialize the rays collection to show continuous angles
     rays_collection = []
     
+    # Create a separate axes for text at the left side of the figure, adjusted for the lower graph
+    text_ax = fig.add_axes([0.02, 0.05, 0.2, 0.75])
+    text_ax.axis('off')  # Hide the axes
+    
     # Text for displaying current angle and equation info
-    angle_text = ax.text(0.05, 0.95, "", transform=ax.transAxes)
-    equation_text = ax.text(0.05, 0.90, f"Equation: {equation_str}", transform=ax.transAxes)
+    angle_text = text_ax.text(0.1, 0.95, "", transform=text_ax.transAxes, fontsize=14)
+    equation_text = text_ax.text(0.1, 0.90, f"Equation: {equation_str}", transform=text_ax.transAxes, fontsize=14)
     
     # Text for displaying coefficient values
     coef_texts = []
     if coefficients:
         y_pos = 0.85
         for name, value in coefficients.items():
-            coef_text = ax.text(0.05, y_pos, f"{name} = {value}", transform=ax.transAxes)
+            coef_text = text_ax.text(0.1, y_pos, f"{name} = {value}", transform=text_ax.transAxes, fontsize=14)
             coef_texts.append((name, coef_text))
             y_pos -= 0.05
     
     # Initialize curves drawn so far
-    drawn_curve, = ax.plot([], [], 'b-', linewidth=2)
+    drawn_curve, = ax.plot([], [], 'b-', linewidth=2.5)
     
     def init():
         line_trace.set_data([0, 0], [0, polar_function(0)])
@@ -91,10 +100,8 @@ def polar_animator(polar_function, frames=200, interval=100, equation_str="r = f
         angle_text.set_text("")
         drawn_curve.set_data([], [])
         
-        # Include all text elements in return
-        return_elements = [line_trace, point, opposite_point, ray, opposite_ray, angle_text, equation_text, drawn_curve]
-        return_elements.extend([text for _, text in coef_texts])
-        return return_elements
+        # Since we're not using blit, return value doesn't matter
+        return [line_trace, point, opposite_point, ray, opposite_ray, drawn_curve]
     
     def animate(i):
         # Current angle
@@ -128,6 +135,8 @@ def polar_animator(polar_function, frames=200, interval=100, equation_str="r = f
         # Update angle text with r value sign indicator
         r_sign = "+" if r >= 0 else "-"
         angle_text.set_text(f"θ = {theta:.2f} rad = {np.degrees(theta):.1f}°, r = {r_sign}{abs(r):.2f}")
+        # Make sure font size is consistent
+        angle_text.set_fontsize(14)
         
         # Update drawn curve - handle negative r values properly
         thetas = np.linspace(0, theta, 100)
@@ -156,17 +165,18 @@ def polar_animator(polar_function, frames=200, interval=100, equation_str="r = f
                 if callable(coefficients[name]):
                     current_value = coefficients[name](theta)
                     text_obj.set_text(f"{name} = {current_value:.3f}")
+                    text_obj.set_fontsize(14)  # Ensure consistent font size
         
         # Include all elements in return
-        return_elements = [line_trace, point, opposite_point, ray, opposite_ray, angle_text, equation_text, drawn_curve]
-        return_elements.extend([text for _, text in coef_texts])
-        return return_elements
+        # Only return elements from the polar axes since we're not using blit mode
+        return [line_trace, point, opposite_point, ray, opposite_ray, drawn_curve]
     
     ani = animation.FuncAnimation(fig, animate, frames=frames, 
                                   init_func=init, interval=interval,
-                                  blit=True)
+                                  blit=False)  # Disable blit mode to avoid issues with text elements
     
-    plt.title(f"Animation of Polar Equation: {equation_str}")
+    # Add title with left alignment and larger font, with increased padding
+    ax.set_title(f"Animation of Polar Equation: {equation_str}", pad=40, loc='left', fontsize=16)
     plt.grid(True)
     
     return ani
@@ -198,8 +208,8 @@ class PolarEquationApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Polar Equation Explorer")
-        self.root.geometry("1200x800")
-        self.original_geometry = "1200x800"  # Store initial geometry
+        self.root.geometry("1400x800")
+        self.original_geometry = "1400x800"  # Store initial geometry
         self.animation = None
         self.current_frame = None
         self.is_paused = False
@@ -249,13 +259,13 @@ class PolarEquationApp:
         self.setup_ui()
         
     def setup_ui(self):
-        # Main frame
+        # Main frame with minimal top padding
         main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True)
+        main_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
         # Left panel for controls
         self.control_frame = ttk.LabelFrame(main_frame, text="Equation Controls")
-        self.control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=10)
+        self.control_frame.pack(side=tk.LEFT, fill=tk.Y, padx=10, pady=(0, 10))
         
         # Equation selection
         ttk.Label(self.control_frame, text="Select Equation:").pack(anchor='w', padx=10, pady=5)
@@ -295,12 +305,13 @@ class PolarEquationApp:
         self.stop_button.pack(side=tk.LEFT, padx=5)
         self.stop_button["state"] = "disabled"
         
-        # Right panel for plot
+        # Right panel for plot with minimal top padding
         self.plot_frame = ttk.Frame(main_frame)
-        self.plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        self.plot_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
         
         # Create the initial figure and canvas
-        self.fig = Figure(figsize=(8, 8))
+        self.fig = Figure(figsize=(10, 8))
+        # Create layout with more room for the polar plot
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.plot_frame)
         self.canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         
@@ -409,12 +420,16 @@ class PolarEquationApp:
                 return coef_values["a"] + coef_values["b"] * np.cos(theta)
             return 0
         
-        # Create the polar axes
-        ax = self.fig.add_subplot(111, projection='polar')
+        # Create the polar axes with better positioning, shifted down, and more room for title
+        gs = self.fig.add_gridspec(1, 1, left=0.25, right=0.95, top=0.75, bottom=0.05)
+        ax = self.fig.add_subplot(gs[0, 0], projection='polar')
         
         # Plot the function
         thetas = np.linspace(0, 2*np.pi, 1000)
         rs = [current_function(t) for t in thetas]
+        
+        # Increase tick label font size
+        ax.tick_params(axis='both', which='major', labelsize=12)
         
         # Set limits and plot
         ax.set_ylim(0, 1.1 * max(abs(min(rs)) if min(rs) < 0 else 0, max(rs)))
@@ -443,7 +458,8 @@ class PolarEquationApp:
                 else:
                     equation_str = equation_str.replace(name, f"{value:.1f}")
         
-        ax.set_title(f"Polar Equation: {equation_str}")
+        # Add title to the polar axes with left alignment and larger font, with increased padding
+        ax.set_title(f"Polar Equation: {equation_str}", pad=40, loc='left', fontsize=16)
         
         # Update the canvas
         self.canvas.draw()
@@ -466,7 +482,7 @@ class PolarEquationApp:
         # Save original geometry for later restoration
         self.original_geometry = self.root.geometry()
         # Resize window to fit just the controls
-        self.root.geometry("350x500")
+        self.root.geometry("400x500")
         
         # Get the selected equation
         equation_name = self.equation_var.get()
@@ -523,7 +539,6 @@ class PolarEquationApp:
             pass  # Ignore errors setting up the handler
         
         # Show the animation
-        plt.tight_layout()
         plt.show(block=False)
     
     def handle_animation_close(self):

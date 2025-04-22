@@ -189,6 +189,10 @@ def rose(theta):
 def spiral(theta):
     return 0.5 * theta
 
+# Example 5: Limacon
+def limacon(theta):
+    return 2 + 1 * np.cos(theta)
+
 # Main application class
 class PolarEquationApp:
     def __init__(self, root):
@@ -229,6 +233,14 @@ class PolarEquationApp:
                 "equation_str": "r = a·θ",
                 "coefficients": {
                     "a": {"default": 0.5, "min": 0.1, "max": 2}
+                }
+            },
+            "Limacon": {
+                "function": limacon,
+                "equation_str": "r = a + b·cos(θ)",
+                "coefficients": {
+                    "a": {"default": 2, "min": 0.1, "max": 5},
+                    "b": {"default": 1, "min": 0.1, "max": 5}
                 }
             }
         }
@@ -393,6 +405,8 @@ class PolarEquationApp:
                 return coef_values["a"] * np.cos(coef_values["n"] * theta)
             elif equation_name == "Spiral":
                 return coef_values["a"] * theta
+            elif equation_name == "Limacon":
+                return coef_values["a"] + coef_values["b"] * np.cos(theta)
             return 0
         
         # Create the polar axes
@@ -473,6 +487,8 @@ class PolarEquationApp:
                 return coef_values["a"] * np.cos(coef_values["n"] * theta)
             elif equation_name == "Spiral":
                 return coef_values["a"] * theta
+            elif equation_name == "Limacon":
+                return coef_values["a"] + coef_values["b"] * np.cos(theta)
             return 0
         
         # Create dynamic coefficients for display
